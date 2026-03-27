@@ -1,1 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lemons & Melons Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --bg: #f4f4f5; --sidebar: #18181b; --text: #09090b; --primary: #10b981; --panel: #ffffff; --border: #e4e4e7; }
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        body { display: flex; height: 100vh; background-color: var(--bg); color: var(--text); overflow: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: 250px; background: var(--sidebar); color: white; padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
+        .sidebar h2 { padding: 0 20px 20px; font-size: 1.2rem; border-bottom: 1px solid #3f3f46; margin-bottom: 10px;}
+        .nav-btn { display: block; width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 1rem; transition: 0.2s; }
+        .nav-btn:hover, .nav-btn.active { background: #27272a; color: white; border-left: 4px solid var(--primary); }
+        
+        /* Main Area */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; }
+        .tab-panel { display: none; background: var(--panel); padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; }
+        .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
+        h1 { margin-bottom: 10px; font-size: 1.8rem; }
+        .subtitle { color: #71717a; margin-bottom: 25px; font-size: 1rem; }
+        
+        /* Grid & Cards */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .card { padding: 20px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; }
+        .card h3 { font-size: 0.9rem; color: #71717a; margin-bottom: 10px; font-weight: 500; }
+        .card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        
+        /* Progress */
+        .progress-bar { width: 100%; height: 10px; background: var(--border); border-radius: 5px; margin-top: 15px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s; }
+        
+        /* Elements */
+        .action-btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: 0.2s; }
+        .action-btn:hover { opacity: 0.9; }
+        .action-btn.secondary { background: #3f3f46; }
+        
+        /* Accordions for Guides */
+        details { background: #fafafa; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+        summary { padding: 15px; font-weight: 600; cursor: pointer; background: white; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+        summary::-webkit-details-marker { display: none; }
+        summary:after { content: '+'; font-size: 1.2rem; color: #71717a; }
+        details[open] summary:after { content: '-'; }
+        details .content { padding: 15px; border-top: 1px solid var(--border); font-size: 0.95rem; line-height: 1.5; }
+        
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal.active { display: flex; animation: fadeIn 0.2s; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 400px; }
+        .modal-content h2 { margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: #3f3f46; font-weight: 500; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 25px; }
+        .modal-actions button { flex: 1; }
 
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Mobile tweaks */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+            .sidebar h2 { width: 100%; border-bottom: none; padding: 5px 10px; margin-bottom: 0; }
+            .nav-btn { width: auto; padding: 8px 12px; font-size: 0.9rem; border-left: none; border-bottom: 2px solid transparent; }
+            .nav-btn:hover, .nav-btn.active { border-left: none; border-bottom: 2px solid var(--primary); }
+            .main-content { padding: 15px; }
+            .tab-panel { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Lemons & Melons</h2>
+        <button class="nav-btn active" data-action="switchTab" data-target="start">👋 Start</button>
+        <button class="nav-btn" data-action="switchTab" data-target="overview">📊 Overview</button>
+        <button class="nav-btn" data-action="switchTab" data-target="revenue">💰 Revenue</button>
+        <button class="nav-btn" data-action="switchTab" data-target="social">📱 Social</button>
+        <button class="nav-btn" data-action="switchTab" data-target="tasks">✅ Tasks</button>
+        <button class="nav-btn" data-action="switchTab" data-target="funnel">🔀 Funnel</button>
+        <button class="nav-btn" data-action="switchTab" data-target="finance">💵 Finance</button>
+        <button class="nav-btn" data-action="switchTab" data-target="products">🛍 Products</button>
+        <button class="nav-btn" data-action="switchTab" data-target="setup">🚀 Setup</button>
+    </div>
+
+    <div class="main-content">
+        <div id="start" class="tab-panel active">
+            <h1>👋 Welcome to the Dashboard</h1>
+            <p class="subtitle">Your central hub for scaling Lemons & Melons to $2,000/month.</p>
+            <div class="card-grid">
+                <div class="card" style="cursor:pointer;" data-action="switchTab" data-target="revenue">
+                    <h3>Current MRR Goal</h3>
+                    <div class="value" id="dash-mrr">$0</div>
+                    <p style="margin-top:10px; color:#71717a; font-size:0.9rem;">Tap to update revenue</p>
+                </div>
+                <div class="card" style="cursor:pointer;" data-action="switchTab" data-target="tasks">
+                    <h3>Next Action</h3>
+                    <div class="value" style="color:#09090b; font-size:1.2rem;">Complete Setup Guide</div>
+                    <p style="margin-top:10px; color:#71717a; font-size:0.9rem;">Tap to view tasks</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="overview" class="tab-panel">
+            <h1>📊 Business Overview</h1>
+            <p class="subtitle">High-level metrics across the business.</p>
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Total Revenue (Monthly)</h3>
+                    <div class="value" id="overview-rev">$0</div>
+                    <div class="progress-bar"><div class="progress-fill" id="overview-progress"></div></div>
+                    <p style="margin-top:10px; font-size:0.8rem; color:#a1a1aa; text-align:right;">Goal: $2,000</p>
+                </div>
+                <div class="card">
+                    <h3>Total Audience</h3>
+                    <div class="value" id="overview-social">0</div>
+                    <p style="margin-top:10px; font-size:0.8rem; color:#a1a1aa;">Across all platforms</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="revenue" class="tab-panel">
+            <h1>💰 Revenue Tracker</h1>
+            <p class="subtitle">Zero-inventory streams monthly breakdown.</p>
+            <div class="card-grid">
+                <div class="card"><h3>Etsy (POD + Digital)</h3><div class="value" id="rev-etsy">$0</div></div>
+                <div class="card"><h3>Shopify (Dropship)</h3><div class="value" id="rev-shopify">$0</div></div>
+                <div class="card"><h3>Amazon Merch</h3><div class="value" id="rev-amazon">$0</div></div>
+                <div class="card"><h3>TikTok Shop</h3><div class="value" id="rev-tiktok">$0</div></div>
+            </div>
+            <button class="action-btn" data-action="openModal" data-target="revenueModal">Update Revenue</button>
+        </div>
+
+        <div id="social" class="tab-panel">
+            <h1>📱 Social Media Growth</h1>
+            <p class="subtitle">Follower counts across main channels.</p>
+            <div class="card-grid">
+                <div class="card"><h3>Instagram</h3><div class="value" id="soc-ig">0</div></div>
+                <div class="card"><h3>TikTok</h3><div class="value" id="soc-tt">0</div></div>
+                <div class="card"><h3>Facebook</h3><div class="value" id="soc-fb">0</div></div>
+                <div class="card"><h3>Pinterest</h3><div class="value" id="soc-pin">0</div></div>
+            </div>
+            <button class="action-btn" data-action="openModal" data-target="socialModal">Update Followers</button>
+        </div>
+
+        <div id="tasks" class="tab-panel">
+            <h1>✅ Daily/Weekly Tasks</h1>
+            <p class="subtitle">Routine actions to maintain the $2k/mo system.</p>
+            <details>
+                <summary>Daily Operations</summary>
+                <div class="content">
+                    <p>• Check Etsy messages and orders.<br>• Review Zendrop for any unfulfilled Shopify dropship orders.<br>• Post 1 TikTok & cross-post to Instagram Reels using Metricool.</p>
+                </div>
+            </details>
+            <details>
+                <summary>Weekly Operations (Sundays)</summary>
+                <div class="content">
+                    <p>• Research 3 new trending products using Everbee.<br>• Design 3 new items in Canva.<br>• Push designs to Printify (Etsy/Shopify).<br>• Reconcile expenses in Wave Accounting.</p>
+                </div>
+            </details>
+        </div>
+
+        <div id="funnel" class="tab-panel">
+            <h1>🔀 Sales Funnels</h1>
+            <p class="subtitle">How traffic turns into cash.</p>
+            <details>
+                <summary>Organic Social Funnel</summary>
+                <div class="content">TikTok/Reels Content -> Linktree in Bio -> Main Shopify Store -> Checkout -> Zendrop Auto-Fulfills.</div>
+            </details>
+            <details>
+                <summary>Etsy Search Funnel</summary>
+                <div class="content">Everbee SEO Keywords -> Etsy Listing -> Customer Buys -> Printify Auto-Fulfills -> Profit hits Bluevine.</div>
+            </details>
+        </div>
+
+        <div id="finance" class="tab-panel">
+            <h1>💵 Finance & Accounting</h1>
+            <p class="subtitle">Tools: Wave Accounting & Bluevine.</p>
+            <div class="card">
+                <h3>Golden Rules</h3>
+                <div style="margin-top:10px; font-size:0.95rem; line-height:1.6;">
+                    1. <strong>Never</strong> mix personal and business funds. All income goes to Bluevine.<br>
+                    2. Pay Printify/Zendrop costs directly from the Bluevine account.<br>
+                    3. Log into Wave Accounting monthly to sync the Bluevine feed.
+                </div>
+            </div>
+        </div>
+
+        <div id="products" class="tab-panel">
+            <h1>🛍 Product Catalog Strategy</h1>
+            <p class="subtitle">AI & Research-driven product ideas.</p>
+            <div class="card">
+                <h3>Current Focus Niches</h3>
+                <p style="margin-top:10px;">1. Minimalist Coffee Mugs (Printify)<br>2. Digital Planners / Organizers (Etsy Digital)<br>3. Aesthetic Tech Accessories (Zendrop)</p>
+            </div>
+        </div>
+
+        <div id="setup" class="tab-panel">
+            <h1>🚀 Setup Phase Guide</h1>
+            <p class="subtitle">Tap to expand instructions.</p>
+            <details>
+                <summary>Phase 1: Legal & Banking (Done)</summary>
+                <div class="content">LLC formed, Bluevine setup.</div>
+            </details>
+            <details>
+                <summary>Phase 2: Platform Connections</summary>
+                <div class="content">1. Connect Printify to Etsy.<br>2. Connect Zendrop to Shopify.<br>3. Link Bluevine to all payout methods.</div>
+            </details>
+            <details>
+                <summary>Phase 3: Launch</summary>
+                <div class="content">List first 10 products. Set up Metricool social schedules.</div>
+            </details>
+        </div>
+    </div>
+
+    <div id="revenueModal" class="modal">
+        <div class="modal-content">
+            <h2>Update Revenue</h2>
+            <div class="input-group">
+                <label>Etsy Revenue ($)</label>
+                <input type="number" id="input-etsy" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>Shopify Revenue ($)</label>
+                <input type="number" id="input-shopify" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>Amazon Revenue ($)</label>
+                <input type="number" id="input-amazon" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>TikTok Shop Revenue ($)</label>
+                <input type="number" id="input-tiktok" placeholder="0">
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn" data-action="saveRevenue">Save</button>
+                <button class="action-btn secondary" data-action="closeModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="socialModal" class="modal">
+        <div class="modal-content">
+            <h2>Update Followers</h2>
+            <div class="input-group">
+                <label>Instagram Followers</label>
+                <input type="number" id="input-ig" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>TikTok Followers</label>
+                <input type="number" id="input-tt" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>Facebook Followers</label>
+                <input type="number" id="input-fb" placeholder="0">
+            </div>
+            <div class="input-group">
+                <label>Pinterest Followers</label>
+                <input type="number" id="input-pin" placeholder="0">
+            </div>
+            <div class="modal-actions">
+                <button class="action-btn" data-action="saveSocial">Save</button>
+                <button class="action-btn secondary" data-action="closeModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Config & State
+        var firebaseConfig = {
+            apiKey: "AIzaSyDtCXIC22oAXUpEtJF7BSU5SwkXTCWMkfI",
+            authDomain: "lemonsandmelons-5f74a.firebaseapp.com",
+            databaseURL: "https://lemonsandmelons-5f74a-default-rtdb.firebaseio.com",
+            projectId: "lemonsandmelons-5f74a",
+            storageBucket: "lemonsandmelons-5f74a.firebasestorage.app",
+            messagingSenderId: "527565638308",
+            appId: "1:527565638308:web:4823f622d5d2ed9a8db431",
+            measurementId: "G-GY3N92LZJH"
+        };
+        
+        var appData = { 
+            revenue: { etsy: 0, shopify: 0, amazon: 0, tiktok: 0 },
+            social: { ig: 0, tt: 0, fb: 0, pin: 0 }
+        };
+        var dbRef = null;
+
+        // 2. Core Functions
+        function switchTab(tabId) {
+            var panels = document.querySelectorAll('.tab-panel');
+            var btns = document.querySelectorAll('.nav-btn');
+            for(var i=0; i<panels.length; i++) { panels[i].classList.remove('active'); }
+            for(var j=0; j<btns.length; j++) { btns[j].classList.remove('active'); }
+            
+            var targetPanel = document.getElementById(tabId);
+            if(targetPanel) targetPanel.classList.add('active');
+            
+            var activeBtn = document.querySelector('.nav-btn[data-target="' + tabId + '"]');
+            if(activeBtn) activeBtn.classList.add('active');
+            
+            // Scroll to top of main content on mobile tab switch
+            document.querySelector('.main-content').scrollTop = 0;
+        }
+
+        function updateUI() {
+            var totalRev = appData.revenue.etsy + appData.revenue.shopify + appData.revenue.amazon + appData.revenue.tiktok;
+            var totalSoc = appData.social.ig + appData.social.tt + appData.social.fb + appData.social.pin;
+
+            // Overview & Start Tabs
+            if(document.getElementById('dash-mrr')) document.getElementById('dash-mrr').innerText = '$' + totalRev;
+            if(document.getElementById('overview-rev')) document.getElementById('overview-rev').innerText = '$' + totalRev;
+            if(document.getElementById('overview-social')) document.getElementById('overview-social').innerText = totalSoc;
+            
+            var percent = (totalRev / 2000) * 100;
+            if(percent > 100) percent = 100;
+            if(document.getElementById('overview-progress')) document.getElementById('overview-progress').style.width = percent + '%';
+
+            // Revenue Tab
+            if(document.getElementById('rev-etsy')) document.getElementById('rev-etsy').innerText = '$' + appData.revenue.etsy;
+            if(document.getElementById('rev-shopify')) document.getElementById('rev-shopify').innerText = '$' + appData.revenue.shopify;
+            if(document.getElementById('rev-amazon')) document.getElementById('rev-amazon').innerText = '$' + appData.revenue.amazon;
+            if(document.getElementById('rev-tiktok')) document.getElementById('rev-tiktok').innerText = '$' + appData.revenue.tiktok;
+
+            // Social Tab
+            if(document.getElementById('soc-ig')) document.getElementById('soc-ig').innerText = appData.social.ig;
+            if(document.getElementById('soc-tt')) document.getElementById('soc-tt').innerText = appData.social.tt;
+            if(document.getElementById('soc-fb')) document.getElementById('soc-fb').innerText = appData.social.fb;
+            if(document.getElementById('soc-pin')) document.getElementById('soc-pin').innerText = appData.social.pin;
+
+            // Pre-fill inputs
+            document.getElementById('input-etsy').value = appData.revenue.etsy;
+            document.getElementById('input-shopify').value = appData.revenue.shopify;
+            document.getElementById('input-amazon').value = appData.revenue.amazon;
+            document.getElementById('input-tiktok').value = appData.revenue.tiktok;
+
+            document.getElementById('input-ig').value = appData.social.ig;
+            document.getElementById('input-tt').value = appData.social.tt;
+            document.getElementById('input-fb').value = appData.social.fb;
+            document.getElementById('input-pin').value = appData.social.pin;
+        }
+
+        function saveData() {
+            localStorage.setItem('lemonsData', JSON.stringify(appData));
+            if(dbRef) {
+                try { dbRef.set(appData).catch(function(e){ console.log("Firebase sync failed"); }); } 
+                catch(e) {}
+            }
+            updateUI();
+        }
+
+        // 3. Boot Sequence
+        window.addEventListener('DOMContentLoaded', function() {
+            switchTab('start');
+            
+            // Load Local Fast
+           
