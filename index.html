@@ -3,44 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lemons & Melons Dashboard</title>
+    <title>Lemons & Melons Dashboard (Offline)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root { --bg: #f4f4f5; --sidebar: #18181b; --text: #09090b; --primary: #10b981; --panel: #ffffff; --border: #e4e4e7; }
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         body { display: flex; height: 100vh; background-color: var(--bg); color: var(--text); overflow: hidden; }
         
-        /* Sidebar */
         .sidebar { width: 250px; background: var(--sidebar); color: white; padding: 20px 0; overflow-y: auto; flex-shrink: 0; }
         .sidebar h2 { padding: 0 20px 20px; font-size: 1.2rem; border-bottom: 1px solid #3f3f46; margin-bottom: 10px;}
         .nav-btn { display: block; width: 100%; text-align: left; padding: 12px 20px; background: none; border: none; color: #a1a1aa; cursor: pointer; font-size: 1rem; transition: 0.2s; }
         .nav-btn:hover, .nav-btn.active { background: #27272a; color: white; border-left: 4px solid var(--primary); }
         
-        /* Main Area */
         .main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .tab-panel { display: none; background: var(--panel); padding: 30px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 1000px; margin: 0 auto; }
         .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
         h1 { margin-bottom: 10px; font-size: 1.8rem; }
         .subtitle { color: #71717a; margin-bottom: 25px; font-size: 1rem; }
         
-        /* Grid & Cards */
         .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
         .card { padding: 20px; background: #fafafa; border: 1px solid var(--border); border-radius: 8px; }
         .card h3 { font-size: 0.9rem; color: #71717a; margin-bottom: 10px; font-weight: 500; }
         .card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
         
-        /* Progress */
         .progress-bar { width: 100%; height: 10px; background: var(--border); border-radius: 5px; margin-top: 15px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.5s; }
         
-        /* Elements */
         .action-btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: 0.2s; }
         .action-btn:hover { opacity: 0.9; }
         .action-btn.secondary { background: #3f3f46; }
         
-        /* Accordions for Guides */
+        .task-label { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; cursor: pointer; font-size: 0.95rem; }
+        .task-label input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
         details { background: #fafafa; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
         summary { padding: 15px; font-weight: 600; cursor: pointer; background: white; list-style: none; display: flex; justify-content: space-between; align-items: center; }
         summary::-webkit-details-marker { display: none; }
@@ -48,7 +42,6 @@
         details[open] summary:after { content: '-'; }
         details .content { padding: 15px; border-top: 1px solid var(--border); font-size: 0.95rem; line-height: 1.5; }
         
-        /* Modals */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal.active { display: flex; animation: fadeIn 0.2s; }
         .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 400px; }
@@ -61,7 +54,6 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Mobile tweaks */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; height: auto; padding: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
@@ -90,7 +82,7 @@
 
     <div class="main-content">
         <div id="start" class="tab-panel active">
-            <h1>👋 Welcome to the Dashboard</h1>
+            <h1>👋 Welcome to the Dashboard (Offline)</h1>
             <p class="subtitle">Your central hub for scaling Lemons & Melons to $2,000/month.</p>
             <div class="card-grid">
                 <div class="card" style="cursor:pointer;" data-action="switchTab" data-target="revenue">
@@ -151,18 +143,46 @@
         <div id="tasks" class="tab-panel">
             <h1>✅ Daily/Weekly Tasks</h1>
             <p class="subtitle">Routine actions to maintain the $2k/mo system.</p>
-            <details>
-                <summary>Daily Operations</summary>
-                <div class="content">
-                    <p>• Check Etsy messages and orders.<br>• Review Zendrop for any unfulfilled Shopify dropship orders.<br>• Post 1 TikTok & cross-post to Instagram Reels using Metricool.</p>
+            
+            <div class="card" style="margin-bottom: 20px;">
+                <h3>Daily Operations</h3>
+                <div style="margin-top: 15px;">
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="daily" data-index="0">
+                        <span>Check Etsy messages and orders.</span>
+                    </label>
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="daily" data-index="1">
+                        <span>Review Zendrop for unfulfilled Shopify dropship orders.</span>
+                    </label>
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="daily" data-index="2">
+                        <span>Post 1 TikTok & cross-post to Instagram Reels using Metricool.</span>
+                    </label>
                 </div>
-            </details>
-            <details>
-                <summary>Weekly Operations (Sundays)</summary>
-                <div class="content">
-                    <p>• Research 3 new trending products using Everbee.<br>• Design 3 new items in Canva.<br>• Push designs to Printify (Etsy/Shopify).<br>• Reconcile expenses in Wave Accounting.</p>
+            </div>
+
+            <div class="card">
+                <h3>Weekly Operations (Sundays)</h3>
+                <div style="margin-top: 15px;">
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="weekly" data-index="0">
+                        <span>Research 3 new trending products using Everbee.</span>
+                    </label>
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="weekly" data-index="1">
+                        <span>Design 3 new items in Canva.</span>
+                    </label>
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="weekly" data-index="2">
+                        <span>Push designs to Printify (Etsy/Shopify).</span>
+                    </label>
+                    <label class="task-label">
+                        <input type="checkbox" data-action="toggleTask" data-type="weekly" data-index="3">
+                        <span>Reconcile expenses in Wave Accounting.</span>
+                    </label>
                 </div>
-            </details>
+            </div>
         </div>
 
         <div id="funnel" class="tab-panel">
@@ -272,22 +292,13 @@
 
     <script>
         // 1. Config & State
-        var firebaseConfig = {
-            apiKey: "AIzaSyDtCXIC22oAXUpEtJF7BSU5SwkXTCWMkfI",
-            authDomain: "lemonsandmelons-5f74a.firebaseapp.com",
-            databaseURL: "https://lemonsandmelons-5f74a-default-rtdb.firebaseio.com",
-            projectId: "lemonsandmelons-5f74a",
-            storageBucket: "lemonsandmelons-5f74a.firebasestorage.app",
-            messagingSenderId: "527565638308",
-            appId: "1:527565638308:web:4823f622d5d2ed9a8db431",
-            measurementId: "G-GY3N92LZJH"
+        var defaultData = { 
+            revenue: { etsy: 0, shopify: 0, amazon: 0, tiktok: 0 },
+            social: { ig: 0, tt: 0, fb: 0, pin: 0 },
+            tasks: { daily: [false, false, false], weekly: [false, false, false, false] }
         };
         
-        var appData = { 
-            revenue: { etsy: 0, shopify: 0, amazon: 0, tiktok: 0 },
-            social: { ig: 0, tt: 0, fb: 0, pin: 0 }
-        };
-        var dbRef = null;
+        var appData = JSON.parse(JSON.stringify(defaultData));
 
         // 2. Core Functions
         function switchTab(tabId) {
@@ -302,7 +313,6 @@
             var activeBtn = document.querySelector('.nav-btn[data-target="' + tabId + '"]');
             if(activeBtn) activeBtn.classList.add('active');
             
-            // Scroll to top of main content on mobile tab switch
             document.querySelector('.main-content').scrollTop = 0;
         }
 
@@ -310,7 +320,6 @@
             var totalRev = appData.revenue.etsy + appData.revenue.shopify + appData.revenue.amazon + appData.revenue.tiktok;
             var totalSoc = appData.social.ig + appData.social.tt + appData.social.fb + appData.social.pin;
 
-            // Overview & Start Tabs
             if(document.getElementById('dash-mrr')) document.getElementById('dash-mrr').innerText = '$' + totalRev;
             if(document.getElementById('overview-rev')) document.getElementById('overview-rev').innerText = '$' + totalRev;
             if(document.getElementById('overview-social')) document.getElementById('overview-social').innerText = totalSoc;
@@ -319,42 +328,17 @@
             if(percent > 100) percent = 100;
             if(document.getElementById('overview-progress')) document.getElementById('overview-progress').style.width = percent + '%';
 
-            // Revenue Tab
             if(document.getElementById('rev-etsy')) document.getElementById('rev-etsy').innerText = '$' + appData.revenue.etsy;
             if(document.getElementById('rev-shopify')) document.getElementById('rev-shopify').innerText = '$' + appData.revenue.shopify;
             if(document.getElementById('rev-amazon')) document.getElementById('rev-amazon').innerText = '$' + appData.revenue.amazon;
             if(document.getElementById('rev-tiktok')) document.getElementById('rev-tiktok').innerText = '$' + appData.revenue.tiktok;
 
-            // Social Tab
             if(document.getElementById('soc-ig')) document.getElementById('soc-ig').innerText = appData.social.ig;
             if(document.getElementById('soc-tt')) document.getElementById('soc-tt').innerText = appData.social.tt;
             if(document.getElementById('soc-fb')) document.getElementById('soc-fb').innerText = appData.social.fb;
             if(document.getElementById('soc-pin')) document.getElementById('soc-pin').innerText = appData.social.pin;
 
-            // Pre-fill inputs
             document.getElementById('input-etsy').value = appData.revenue.etsy;
             document.getElementById('input-shopify').value = appData.revenue.shopify;
             document.getElementById('input-amazon').value = appData.revenue.amazon;
-            document.getElementById('input-tiktok').value = appData.revenue.tiktok;
-
-            document.getElementById('input-ig').value = appData.social.ig;
-            document.getElementById('input-tt').value = appData.social.tt;
-            document.getElementById('input-fb').value = appData.social.fb;
-            document.getElementById('input-pin').value = appData.social.pin;
-        }
-
-        function saveData() {
-            localStorage.setItem('lemonsData', JSON.stringify(appData));
-            if(dbRef) {
-                try { dbRef.set(appData).catch(function(e){ console.log("Firebase sync failed"); }); } 
-                catch(e) {}
-            }
-            updateUI();
-        }
-
-        // 3. Boot Sequence
-        window.addEventListener('DOMContentLoaded', function() {
-            switchTab('start');
-            
-            // Load Local Fast
-           
+            document.getElementById('input-tiktok').value = appData.revenue.ti
